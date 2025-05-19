@@ -1,6 +1,11 @@
 {
     "files.associations": {
         "*.md": "markdown",
-        "io.h": "c"
-    }
+        "io.h": "c",
+        "ext_io.h": "c",
+        "pinmap.h": "c",
+        "uart.h": "c",
+        "stdio.h": "c"
+    },
+    "C_Cpp.default.configurationProvider": "nordic-semiconductor.nrf-connect"
 }

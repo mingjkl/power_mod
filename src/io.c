@@ -39,7 +39,7 @@ void io_init(void)
 
     nrf_gpio_pin_set(VS_IN_PIN);
 
-    // ext_ic_check();
+    ext_ic_check();
 
 }   
 
