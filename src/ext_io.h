@@ -4,5 +4,5 @@
 #include <stdint.h>
 
 void ext_ic_check(void);
-
+uint8_t ext_io_init(void);
 #endif // EXT_IO_H

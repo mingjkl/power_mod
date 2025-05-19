@@ -5,7 +5,8 @@
         "ext_io.h": "c",
         "pinmap.h": "c",
         "uart.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "i2c.h": "c"
     },
     "C_Cpp.default.configurationProvider": "nordic-semiconductor.nrf-connect"
 }

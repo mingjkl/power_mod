@@ -39,7 +39,12 @@ void io_init(void)
 
     nrf_gpio_pin_set(VS_IN_PIN);
 
-    ext_ic_check();
+    uint8_t ret = ext_io_init();
+    if (ret) {
+        LOG_INF("External IO initialized successfully");
+    } else {
+        LOG_ERR("External IO initialization failed");
+    }
 
 }   
 
