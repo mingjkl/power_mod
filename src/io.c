@@ -5,6 +5,7 @@
 #include <zephyr/logging/log.h>
 
 #include "io.h"
+#include "ext_io.h"
 
 LOG_MODULE_REGISTER(io, LOG_LEVEL_INF);
 
@@ -37,6 +38,8 @@ void io_init(void)
     nrf_gpio_pin_clear(VLED_CUR_TRI6_PIN);
 
     nrf_gpio_pin_set(VS_IN_PIN);
+
+    // ext_ic_check();
 
 }   
 
