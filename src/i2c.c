@@ -29,11 +29,12 @@ void i2c_init(void)
 {
 	int err_code;
     nrfx_twi_config_t config = NRFX_TWI_DEFAULT_CONFIG(I2C_SCL_PIN, I2C_SDA_PIN);
+	config.frequency = NRF_TWI_FREQ_400K;
     err_code = nrfx_twi_init(&twi, &config, twi_handler, NULL);
-	// if (err_code != NRFX_SUCCESS) {
-	// 	LOG_ERR("TWI initialization failed: %d", err_code);
-	// 	return;
-	// }
+	if (err_code != NRFX_SUCCESS) {
+		LOG_ERR("TWI initialization failed: %d", err_code);
+		return;
+	}
     IRQ_DIRECT_CONNECT(NRFX_IRQ_NUMBER_GET(NRF_TWI_INST_GET(0)), IRQ_PRIO_LOWEST,
                        NRFX_TWI_INST_HANDLER_GET(0), 0);
     nrfx_twi_enable(&twi);

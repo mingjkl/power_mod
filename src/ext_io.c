@@ -5,6 +5,7 @@
 #include "i2c.h"
 #include "zephyr/logging/log.h"
 #include "ext_io.h"
+#include "pinmap.h"
 
 
 #define EXT_IC_ADDR               0x43  // 7-bit I2C 地址（ADDR 引脚接 GND）
@@ -17,9 +18,21 @@
 #define REG_PULL_DOWN_UP         0x0D  // 上拉/下拉设置（可选）
 #define REG_INPUT_STATUS         0x0F  // 输入状态读取
 
+uint8_t ext_io_output_global_val = 0; 
 
 
 LOG_MODULE_REGISTER(ext_io, LOG_LEVEL_DBG);
+
+void ext_io_sw_reset(void)
+{
+    uint8_t val = 0x01;
+    i2c_write_bytes(EXT_IC_ADDR, REG_DEVICE_ID_CTRL, val);
+    k_msleep(10); // 等待 10ms
+    val = 0x00;
+    i2c_write_bytes(EXT_IC_ADDR, REG_DEVICE_ID_CTRL, val);
+    k_msleep(10); // 等待 10ms
+    LOG_DBG("External IO reset");
+}
 
 uint8_t ext_io_get_io_direction(void)
 {
@@ -88,6 +101,9 @@ void ext_io_set_io_direction(uint8_t io_num, enum ext_io_dir_e dir)
 
 uint8_t ext_io_get_output_state(void)
 {
+
+    return ext_io_output_global_val;
+
     uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE);
     char state[16] = {0};
     for(uint8_t i = 0; i < 8; i++)
@@ -103,7 +119,7 @@ uint8_t ext_io_get_output_state(void)
 
         }
     }   
-    LOG_DBG("Output state: %s", state);
+    // LOG_DBG("Output state: %s", state);
     return val;
 }
 
@@ -117,7 +133,7 @@ void ext_io_set_output_state(uint8_t io_num, uint8_t state)
         LOG_ERR("Invalid IO number: %d", io_num);
         return;
     }
-
+    
     if(state) // 设置为高电平
     {
         val |= (1 << io_num);
@@ -126,7 +142,8 @@ void ext_io_set_output_state(uint8_t io_num, uint8_t state)
     {
         val &= ~(1 << io_num);
     }
-    i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE, val);
+    ext_io_output_global_val = val;
+    i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE, ext_io_output_global_val);
     new_val = ext_io_get_output_state();
 
     if(new_val != val)
@@ -247,6 +264,95 @@ uint8_t ext_io_get_input_state(void)
     return val;
 }
 
+uint8_t ext_io_get_channel_state(uint8_t io_num)
+{
+    uint8_t val = ext_io_get_input_state();
+    
+    if(io_num > 7)
+    {
+        LOG_ERR("Invalid IO number: %d", io_num);
+        return 0;
+    }
+
+    if(val & (1 << io_num))
+    {
+        return 1; // 高电平
+    }
+    else
+    {
+        return 0; // 低电平
+    }
+}
+
+uint8_t ext_io_set_pull_enable(uint8_t io_num, uint8_t enable)
+{
+    uint8_t val = ext_io_get_pull_enable();
+    uint8_t new_val = 0;
+    
+    if(io_num > 7)
+    {
+        LOG_ERR("Invalid IO number: %d", io_num);
+        return 0;
+    }
+
+    if(enable) // 设置为使能
+    {
+        val |= (1 << io_num);
+    }
+    else // 设置为不使能
+    {
+        val &= ~(1 << io_num);
+    }
+    i2c_write_bytes(EXT_IC_ADDR, REG_PULL_ENABLE, val);
+    new_val = ext_io_get_pull_enable();
+
+    if(new_val != val)
+    {
+        LOG_ERR("Failed to set pull enable: %d", io_num);
+        return 0;
+    }
+    else
+    {
+        LOG_DBG("Set pull enable %d to %s", io_num, enable ? "enable" : "disable");
+        return 1;
+    }
+}
+
+uint8_t ext_io_set_pull_Down_up(uint8_t io_num, uint8_t pull)
+{
+    uint8_t val = ext_io_get_pull_Down_up();
+    uint8_t new_val = 0;
+    
+    if(io_num > 7)
+    {
+        LOG_ERR("Invalid IO number: %d", io_num);
+        return 0;
+    }
+
+    if(pull) // 设置为上拉
+    {
+        val |= (1 << io_num);
+    }
+    else // 设置为下拉
+    {
+        val &= ~(1 << io_num);
+    }
+    i2c_write_bytes(EXT_IC_ADDR, REG_PULL_DOWN_UP, val);
+    new_val = ext_io_get_pull_Down_up();
+
+    if(new_val != val)
+    {
+        LOG_ERR("Failed to set pull up/down: %d", io_num);
+        return 0;
+    }
+    else
+    {
+        LOG_DBG("Set pull up/down %d to %s", io_num, pull ? "pull up" : "pull down");
+        return 1;
+    }
+}
+
+
 
 void ext_ic_check(void)
 {
@@ -263,69 +369,102 @@ void ext_ic_check(void)
     LOG_DBG("SW Reset Flag:  %d", sw_rst);
 }
 
+void statu_led_set(uint8_t status)
+{
+    if(status)
+    {
+        ext_io_set_output_state(LED_EXT_PIN, 1); // 设置为高电平
+    }
+    else
+    {
+        ext_io_set_output_state(LED_EXT_PIN, 0); // 设置为低电平
+    }
+}
+
+uint8_t is_key_on(void)
+{
+    uint8_t key_state = ext_io_get_channel_state(KEY_EXT_PIN);
+    if(key_state == 1)
+    {
+        LOG_DBG("Key is pressed");
+        return 1;
+    }
+    else
+    {
+        LOG_DBG("Key is not pressed");
+        return 0;
+    }
+}
+
+uint8_t is_usb_on(void)
+{
+    uint8_t usb_state = ext_io_get_channel_state(USB_EXT_PIN);
+    if(usb_state == 1)
+    {
+        LOG_DBG("USB is connected");
+        return 1;
+    }
+    else
+    {
+        LOG_DBG("USB is not connected");
+        return 0;
+    }
+}
+
 
 uint8_t ext_io_init(void)
 {
-    // uint8_t dev_id = i2c_read_bytes(EXT_IC_ADDR, REG_DEVICE_ID_CTRL);
+    ext_io_sw_reset();
 
-    // if (((dev_id >> 5) & 0x07) != 0x05) {
-    //     LOG_ERR("Device not recognized. MF_ID = 0x%X", (dev_id >> 5) & 0x07);
-    //     return false;
-    // }
+    uint8_t dev_id = i2c_read_bytes(EXT_IC_ADDR, REG_DEVICE_ID_CTRL);
 
-    // // 默认初始化为全部推挽输出，输出低电平，禁用上拉
-    // i2c_write_bytes(EXT_IC_ADDR, REG_IO_DIRECTION, 0xFF);   // 全为输出
-    // i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE,     0x00);  // 初始低电平
-    // i2c_write_bytes(EXT_IC_ADDR, REG_PULL_ENABLE,      0x00);  // 禁用上拉
-    // i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z,    0x00);  // 关闭高阻态（全推挽）
-
-    // ext_io_test_blinky();
-
-    ext_io_set_io_direction(2, EXT_IO_DIR_OUTPUT);
-    ext_io_set_io_direction(3, EXT_IO_DIR_OUTPUT);
-    ext_io_set_io_direction(4, EXT_IO_DIR_OUTPUT);
-    ext_io_set_output_high_z(2, 0);
-    ext_io_set_output_high_z(3, 0);
-    ext_io_set_output_high_z(4, 0);
-
-    while(1)
-    {
-        // i2c_read_bytes(EXT_IC_ADDR, REG_DEVICE_ID_CTRL);
-        // ext_io_get_io_direction();
-        // k_msleep(10);
-        // ext_io_get_output_state();
-        // k_msleep(10);
-        // ext_io_get_output_high_z();
-        // k_msleep(10);
-        // ext_io_get_pull_enable();
-        // k_msleep(10);
-        // ext_io_get_pull_Down_up();
-        // k_msleep(10);
-        // ext_io_get_input_state();
-        // k_msleep(10);
-        // ext_io_set_io_direction(0, 1);
-
-        // i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z, 0x0F);
-        // k_msleep(1);
-        // uint8_t ret = i2c_read_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z);
-        // LOG_DBG("IO Direction: 0x%X", ret);
-
-        
-        ext_io_set_output_state(2, 1);
-        k_msleep(500);
-        ext_io_set_output_state(2, 0);
-        k_msleep(500);
-
-        ext_io_set_output_state(3, 1);
-        k_msleep(500);
-        ext_io_set_output_state(3, 0);
-        k_msleep(500);
-
-        ext_io_set_output_state(4, 1);
-        k_msleep(500);
-        ext_io_set_output_state(4, 0);
-        k_msleep(500);
+    if (((dev_id >> 5) & 0x07) != 0x05) {
+        LOG_ERR("Device not recognized. MF_ID = 0x%X", (dev_id >> 5) & 0x07);
+        return false;
     }
+    else {
+        LOG_DBG("Device recognized. MF_ID = 0x%X", (dev_id >> 5) & 0x07);
+    }
+
+
+    ext_io_set_io_direction(LED_EXT_PIN, EXT_IO_DIR_OUTPUT);
+    ext_io_set_io_direction(USB_EXT_PIN, EXT_IO_DIR_INPUT);
+    ext_io_set_io_direction(KEY_EXT_PIN, EXT_IO_DIR_INPUT);
+    ext_io_set_io_direction(LED_B1_EXT_PIN, EXT_IO_DIR_OUTPUT);
+    ext_io_set_io_direction(LED_B2_EXT_PIN, EXT_IO_DIR_OUTPUT);
+    ext_io_set_io_direction(LED_B3_EXT_PIN, EXT_IO_DIR_OUTPUT);
+    ext_io_set_io_direction(BST_OD_OFF_EXT_PIN, EXT_IO_DIR_OUTPUT);
+    ext_io_set_io_direction(PD_OD_OFF_EXT_PIN, EXT_IO_DIR_OUTPUT);
+
+    ext_io_set_pull_enable(LED_EXT_PIN, 0);
+    ext_io_set_pull_enable(LED_B1_EXT_PIN, 0);
+    ext_io_set_pull_enable(LED_B2_EXT_PIN, 0);
+    ext_io_set_pull_enable(LED_B3_EXT_PIN, 0);
+    ext_io_set_pull_enable(USB_EXT_PIN, 1);  
+    ext_io_set_pull_enable(KEY_EXT_PIN, 1);
+
+
+    ext_io_set_pull_Down_up(USB_EXT_PIN, 0);    // 设置为下拉
+    ext_io_set_pull_Down_up(KEY_EXT_PIN, 1);    // 设置为上拉
+
+    ext_io_set_output_high_z(LED_EXT_PIN, 0); // 设置为推挽输出
+    ext_io_set_output_high_z(LED_B1_EXT_PIN, 0); // 设置为推挽输出
+    ext_io_set_output_high_z(LED_B2_EXT_PIN, 0); // 设置为推挽输出
+    ext_io_set_output_high_z(LED_B3_EXT_PIN, 0); // 设置为推挽输出
+    ext_io_set_output_high_z(BST_OD_OFF_EXT_PIN, 0); // 设置为推挽输出
+    ext_io_set_output_high_z(PD_OD_OFF_EXT_PIN, 0); // 设置为推挽输出
+
+
+    ext_io_set_output_state(LED_EXT_PIN, 1); 
+    ext_io_set_output_state(LED_B1_EXT_PIN, 1); 
+    ext_io_set_output_state(LED_B2_EXT_PIN, 1); 
+    ext_io_set_output_state(LED_B3_EXT_PIN, 1);
+    ext_io_set_output_state(BST_OD_OFF_EXT_PIN, 0); 
+    ext_io_set_output_state(PD_OD_OFF_EXT_PIN, 0); 
+
+
+
+    LOG_DBG("External IO initialized finished");
 
     return true;
 }

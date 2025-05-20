@@ -41,6 +41,14 @@
 // BST_OD_OFF -> PE -> 0   // Bat boost output diode off
 // PD_OD_OFF -> PE -> 1    // PD output diode off
 
+#define LED_EXT_PIN     7
+#define USB_EXT_PIN    6
+#define KEY_EXT_PIN     5
+#define LED_B1_EXT_PIN  4
+#define LED_B2_EXT_PIN  3
+#define LED_B3_EXT_PIN  2
+#define BST_OD_OFF_EXT_PIN 0
+#define PD_OD_OFF_EXT_PIN 1
 
 // Pin definitions
 #define FAN_PIN NRF_GPIO_PIN_MAP(0, 0)

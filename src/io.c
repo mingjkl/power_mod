@@ -9,6 +9,17 @@
 
 LOG_MODULE_REGISTER(io, LOG_LEVEL_INF);
 
+void io_config_high_drive(uint32_t pin_number)
+{
+    nrf_gpio_cfg(
+        pin_number,
+        NRF_GPIO_PIN_DIR_OUTPUT,
+        NRF_GPIO_PIN_INPUT_DISCONNECT,
+        NRF_GPIO_PIN_NOPULL,
+        NRF_GPIO_PIN_S0H1,
+        NRF_GPIO_PIN_NOSENSE);
+}
+
 void io_init(void)
 {
     nrf_gpio_cfg_output(BQ25792_BAT_CE_PIN);
@@ -16,24 +27,20 @@ void io_init(void)
     nrf_gpio_cfg_output(BAT_CHARGER_POWER_PIN);
     nrf_gpio_cfg_output(VOUT_5V_POWER_PIN);
     nrf_gpio_cfg_output(AO_EN_PIN);
-    nrf_gpio_cfg_output(VLED_CUR_TRI1_PIN);
-    nrf_gpio_cfg_output(VLED_CUR_TRI2_PIN);
-    nrf_gpio_cfg_output(VLED_CUR_TRI3_PIN);
-    nrf_gpio_cfg_output(VLED_CUR_TRI4_PIN);
-    nrf_gpio_cfg_output(VLED_CUR_TRI5_PIN);
-    nrf_gpio_cfg_output(VLED_CUR_TRI6_PIN);
+
     nrf_gpio_cfg_output(VS_IN_PIN);
 
-    nrf_gpio_pin_set(BQ25792_BAT_CE_PIN);
-    nrf_gpio_pin_clear(CHARGE_ENABLE_PIN);
-    nrf_gpio_pin_clear(BAT_CHARGER_POWER_PIN);
-    nrf_gpio_pin_clear(VOUT_5V_POWER_PIN);
-    nrf_gpio_pin_clear(AO_EN_PIN);
+    io_config_high_drive(VLED_CUR_TRI1_PIN);
+    io_config_high_drive(VLED_CUR_TRI2_PIN);
+    io_config_high_drive(VLED_CUR_TRI3_PIN);
+    io_config_high_drive(VLED_CUR_TRI4_PIN);
+    io_config_high_drive(VLED_CUR_TRI5_PIN);
+    io_config_high_drive(VLED_CUR_TRI6_PIN);
 
-    nrf_gpio_pin_clear(VLED_CUR_TRI1_PIN);
-    nrf_gpio_pin_clear(VLED_CUR_TRI2_PIN);
-    nrf_gpio_pin_clear(VLED_CUR_TRI3_PIN);
-    nrf_gpio_pin_clear(VLED_CUR_TRI4_PIN);
+    io_config_high_drive(FAN_PIN);
+    nrf_gpio_pin_clear(FAN_PIN);
+
+
     nrf_gpio_pin_clear(VLED_CUR_TRI5_PIN);
     nrf_gpio_pin_clear(VLED_CUR_TRI6_PIN);
 
@@ -45,6 +52,7 @@ void io_init(void)
     } else {
         LOG_ERR("External IO initialization failed");
     }
+    
 
 }   
 

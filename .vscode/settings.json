@@ -6,7 +6,8 @@
         "pinmap.h": "c",
         "uart.h": "c",
         "stdio.h": "c",
-        "i2c.h": "c"
+        "i2c.h": "c",
+        "nrfx_power.h": "c"
     },
     "C_Cpp.default.configurationProvider": "nordic-semiconductor.nrf-connect"
 }
