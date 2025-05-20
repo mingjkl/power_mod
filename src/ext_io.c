@@ -13,9 +13,127 @@
 #define REG_OUTPUT_STATE          0x05  // 输出状态控制
 #define REG_PULL_ENABLE           0x0B  // 上拉使能
 #define REG_OUTPUT_HIGH_Z         0x07  // 高阻态设置（可选）
-
+#define REG_PULL_DOWN_UP         0x0D  // 上拉/下拉设置（可选）
+#define REG_INPUT_STATUS         0x0F  // 输入状态读取
 
 LOG_MODULE_REGISTER(ext_io, LOG_LEVEL_DBG);
+
+uint8_t ext_io_get_io_direction(void)
+{
+    uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_IO_DIRECTION);
+    char dir[16] = {0};
+    for(uint8_t i = 0; i < 8; i++)
+    {
+        if(val & (1 << i))
+        {
+            snprintf(dir + i, 2, "O");  
+        }
+        else
+        {
+            snprintf(dir + i, 2, "I");
+        }
+    }
+    LOG_DBG("IO direction: %s", dir);
+    return val;
+}
+
+uint8_t ext_io_get_output_state(void)
+{
+    uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE);
+    char state[16] = {0};
+    for(uint8_t i = 0; i < 8; i++)
+    {
+        if(val & (1 << i))
+        {
+            snprintf(state + i, 2, "H");  
+
+        }
+        else
+        {
+            snprintf(state + i, 2, "L");
+
+        }
+    }   
+    LOG_DBG("Output state: %s", state);
+    return val;
+}
+
+uint8_t ext_io_get_output_high_z(void)
+{
+    uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z);
+    char state[16] = {0};
+    for(uint8_t i = 0; i < 8; i++)
+    {
+        if(val & (1 << i))
+        {
+            snprintf(state + i, 2, "Z");  
+        }
+        else
+        {
+            snprintf(state + i, 2, "P");
+        }
+    }   
+    LOG_DBG("Output high Z: %s", state);
+    return val;
+}
+
+uint8_t ext_io_get_pull_enable(void)
+{
+    uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_PULL_ENABLE);
+    char state[16] = {0};
+    for(uint8_t i = 0; i < 8; i++)
+    {
+        if(val & (1 << i))
+        {
+            snprintf(state + i, 2, "P");  
+        }
+        else
+        {
+            snprintf(state + i, 2, "N");
+        }
+    }   
+    LOG_DBG("Pull enable: %s", state);
+    return val;
+}
+
+uint8_t ext_io_get_pull_Down_up(void)
+{
+    uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_PULL_ENABLE);
+    char state[16] = {0};
+    for(uint8_t i = 0; i < 8; i++)
+    {
+        if(val & (1 << i))
+        {
+            snprintf(state + i, 2, "U");  
+        }
+        else
+        {
+            snprintf(state + i, 2, "D");
+        }
+    }   
+    LOG_DBG("Pull up/down: %s", state);
+    return val;
+}
+
+uint8_t ext_io_get_input_state(void)
+{
+    uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_INPUT_STATUS);
+    char state[16] = {0};
+    for(uint8_t i = 0; i < 8; i++)
+    {
+        if(val & (1 << i))
+        {
+            snprintf(state + i, 2, "H");  
+        }
+        else
+        {
+            snprintf(state + i, 2, "L");
+        }
+    }   
+    LOG_DBG("Input state: %s", state);
+    return val;
+}
+
 
 void ext_ic_check(void)
 {
@@ -32,88 +150,43 @@ void ext_ic_check(void)
     LOG_DBG("SW Reset Flag:  %d", sw_rst);
 }
 
-void ext_io_set_output(uint8_t pin, bool high)
-{
-    if (pin > 7) return;
-
-    uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE);
-
-    LOG_DBG("Current output state: 0x%X", val);
 
 
-    if (high)
-        val |= (1 << pin);
-    else
-        val &= ~(1 << pin);
 
-    LOG_DBG("New output state: 0x%X", val);
-
-    i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE, val);
-}
-
-void ext_io_config_pin(uint8_t pin, bool is_input, bool pullup)
-{
-    if (pin > 7) return;
-
-    // --- 设置方向寄存器 ---
-    uint8_t dir = i2c_read_bytes(EXT_IC_ADDR, REG_IO_DIRECTION);
-    if (is_input)
-        dir &= ~(1 << pin);  // 0 = 输入
-    else
-        dir |= (1 << pin);   // 1 = 输出
-    i2c_write_bytes(EXT_IC_ADDR, REG_IO_DIRECTION, dir);
-
-    // --- 设置上拉使能 ---
-    uint8_t pull = i2c_read_bytes(EXT_IC_ADDR, REG_PULL_ENABLE);
-    if (is_input && pullup)
-        pull |= (1 << pin);
-    else
-        pull &= ~(1 << pin);
-    i2c_write_bytes(EXT_IC_ADDR, REG_PULL_ENABLE, pull);
-
-    // --- 可选项：设置输出高阻（推挽或开漏）---
-    // i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z, 0x00); // 默认推挽
-}
-
-void ext_io_test_blinky(void)
-{
-    ext_io_config_pin(2, false, false);  // 设置 P2 为输出
-    ext_io_config_pin(3, false, false);  // 设置 P3 为输出
-    ext_io_config_pin(4, false, false);   // 设置 P4 为输入，禁用上拉
-
-    while (1) {
-        // ext_io_set_output(2, true);
-        // ext_io_set_output(3, true);
-        // ext_io_set_output(4, true);
-        i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE, 0xFF);
-        LOG_DBG("LED ON");
-        k_msleep(500);
-
-        // ext_io_set_output(2, false);
-        // ext_io_set_output(3, false);
-        // ext_io_set_output(4, false);
-        // i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE, 0x00);
-        LOG_DBG("LED OFF");
-        k_msleep(500);
-    }
-}
 
 uint8_t ext_io_init(void)
 {
-    uint8_t dev_id = i2c_read_bytes(EXT_IC_ADDR, REG_DEVICE_ID_CTRL);
+    // uint8_t dev_id = i2c_read_bytes(EXT_IC_ADDR, REG_DEVICE_ID_CTRL);
 
-    if (((dev_id >> 5) & 0x07) != 0x05) {
-        LOG_ERR("Device not recognized. MF_ID = 0x%X", (dev_id >> 5) & 0x07);
-        return false;
+    // if (((dev_id >> 5) & 0x07) != 0x05) {
+    //     LOG_ERR("Device not recognized. MF_ID = 0x%X", (dev_id >> 5) & 0x07);
+    //     return false;
+    // }
+
+    // // 默认初始化为全部推挽输出，输出低电平，禁用上拉
+    // i2c_write_bytes(EXT_IC_ADDR, REG_IO_DIRECTION, 0xFF);   // 全为输出
+    // i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE,     0x00);  // 初始低电平
+    // i2c_write_bytes(EXT_IC_ADDR, REG_PULL_ENABLE,      0x00);  // 禁用上拉
+    // i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z,    0x00);  // 关闭高阻态（全推挽）
+
+    // ext_io_test_blinky();
+
+    while(1)
+    {
+        // i2c_read_bytes(EXT_IC_ADDR, REG_DEVICE_ID_CTRL);
+        ext_io_get_io_direction();
+        k_msleep(10);
+        ext_io_get_output_state();
+        k_msleep(10);
+        ext_io_get_output_high_z();
+        k_msleep(10);
+        ext_io_get_pull_enable();
+        k_msleep(10);
+        ext_io_get_pull_Down_up();
+        k_msleep(10);
+        ext_io_get_input_state();
+        k_msleep(10);
     }
-
-    // 默认初始化为全部推挽输出，输出低电平，禁用上拉
-    i2c_write_bytes(EXT_IC_ADDR, REG_IO_DIRECTION, 0xFF);   // 全为输出
-    i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE,     0x00);  // 初始低电平
-    i2c_write_bytes(EXT_IC_ADDR, REG_PULL_ENABLE,      0x00);  // 禁用上拉
-    i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z,    0x00);  // 关闭高阻态（全推挽）
-
-    ext_io_test_blinky();
 
     return true;
 }
