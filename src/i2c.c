@@ -38,10 +38,11 @@ void i2c_init(void)
                        NRFX_TWI_INST_HANDLER_GET(0), 0);
     nrfx_twi_enable(&twi);
 }
-
+uint8_t buffer[2] = {0};
 uint8_t i2c_write_bytes(uint8_t ic_addr, uint8_t addr, uint8_t data) 
 {
-	uint8_t buffer[2] = {addr, data};
+	buffer[0] = addr;
+	buffer[1] = data;
 	nrfx_twi_xfer_desc_t xfer_desc = {
 		.type = NRFX_TWI_XFER_TX,
 		.address = ic_addr,

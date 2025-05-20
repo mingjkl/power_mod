@@ -4,6 +4,7 @@
 #include <zephyr/logging/log.h>
 #include "i2c.h"
 #include "zephyr/logging/log.h"
+#include "ext_io.h"
 
 
 #define EXT_IC_ADDR               0x43  // 7-bit I2C 地址（ADDR 引脚接 GND）
@@ -15,6 +16,8 @@
 #define REG_OUTPUT_HIGH_Z         0x07  // 高阻态设置（可选）
 #define REG_PULL_DOWN_UP         0x0D  // 上拉/下拉设置（可选）
 #define REG_INPUT_STATUS         0x0F  // 输入状态读取
+
+
 
 LOG_MODULE_REGISTER(ext_io, LOG_LEVEL_DBG);
 
@@ -35,6 +38,52 @@ uint8_t ext_io_get_io_direction(void)
     }
     LOG_DBG("IO direction: %s", dir);
     return val;
+}
+
+void ext_io_set_io_set_all_output(void)
+{
+    uint8_t val = 0xFF; // 全部设置为输出
+    i2c_write_bytes(EXT_IC_ADDR, REG_IO_DIRECTION, val);
+    LOG_DBG("Set all IO to output");
+}
+
+void ext_io_set_io_set_all_input(void)
+{
+    uint8_t val = 0x00; // 全部设置为输入
+    i2c_write_bytes(EXT_IC_ADDR, REG_IO_DIRECTION, val);
+    LOG_DBG("Set all IO to input");
+}
+
+void ext_io_set_io_direction(uint8_t io_num, enum ext_io_dir_e dir)
+{
+    uint8_t val = ext_io_get_io_direction();
+    uint8_t new_val = 0;
+    
+    if(io_num > 7)
+    {
+        LOG_ERR("Invalid IO number: %d", io_num);
+        return;
+    }
+
+    if(dir == EXT_IO_DIR_INPUT) // 设置为输入
+    {
+        val &= ~(1 << io_num);
+    }
+    else // 设置为输出
+    {
+        val |= (1 << io_num);
+    }
+    i2c_write_bytes(EXT_IC_ADDR, REG_IO_DIRECTION, val);
+    new_val = ext_io_get_io_direction();
+
+    if(new_val != val)
+    {
+        LOG_ERR("Failed to set IO direction: %d", io_num);
+    }
+    else
+    {
+        LOG_DBG("Set IO %d direction to %s", io_num, dir ? "output" : "input");
+    }
 }
 
 uint8_t ext_io_get_output_state(void)
@@ -58,6 +107,38 @@ uint8_t ext_io_get_output_state(void)
     return val;
 }
 
+void ext_io_set_output_state(uint8_t io_num, uint8_t state)
+{
+    uint8_t val = ext_io_get_output_state();
+    uint8_t new_val = 0;
+    
+    if(io_num > 7)
+    {
+        LOG_ERR("Invalid IO number: %d", io_num);
+        return;
+    }
+
+    if(state) // 设置为高电平
+    {
+        val |= (1 << io_num);
+    }
+    else // 设置为低电平
+    {
+        val &= ~(1 << io_num);
+    }
+    i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_STATE, val);
+    new_val = ext_io_get_output_state();
+
+    if(new_val != val)
+    {
+        LOG_ERR("Failed to set output state: %d", io_num);
+    }
+    else
+    {
+        LOG_DBG("Set output %d state to %s", io_num, state ? "high" : "low");
+    }
+}
+
 uint8_t ext_io_get_output_high_z(void)
 {
     uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z);
@@ -75,6 +156,38 @@ uint8_t ext_io_get_output_high_z(void)
     }   
     LOG_DBG("Output high Z: %s", state);
     return val;
+}
+
+void ext_io_set_output_high_z(uint8_t io_num, uint8_t state)
+{
+    uint8_t val = ext_io_get_output_high_z();
+    uint8_t new_val = 0;
+    
+    if(io_num > 7)
+    {
+        LOG_ERR("Invalid IO number: %d", io_num);
+        return;
+    }
+
+    if(state) // 设置为高阻态
+    {
+        val |= (1 << io_num);
+    }
+    else // 设置为推挽输出
+    {
+        val &= ~(1 << io_num);
+    }
+    i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z, val);
+    new_val = ext_io_get_output_high_z();
+
+    if(new_val != val)
+    {
+        LOG_ERR("Failed to set output high Z: %d", io_num);
+    }
+    else
+    {
+        LOG_DBG("Set output %d high Z to %s", io_num, state ? "high Z" : "push-pull");
+    }
 }
 
 uint8_t ext_io_get_pull_enable(void)
@@ -151,9 +264,6 @@ void ext_ic_check(void)
 }
 
 
-
-
-
 uint8_t ext_io_init(void)
 {
     // uint8_t dev_id = i2c_read_bytes(EXT_IC_ADDR, REG_DEVICE_ID_CTRL);
@@ -171,21 +281,50 @@ uint8_t ext_io_init(void)
 
     // ext_io_test_blinky();
 
+    ext_io_set_io_direction(2, EXT_IO_DIR_OUTPUT);
+    ext_io_set_io_direction(3, EXT_IO_DIR_OUTPUT);
+    ext_io_set_io_direction(4, EXT_IO_DIR_OUTPUT);
+    ext_io_set_output_high_z(2, 0);
+    ext_io_set_output_high_z(3, 0);
+    ext_io_set_output_high_z(4, 0);
+
     while(1)
     {
         // i2c_read_bytes(EXT_IC_ADDR, REG_DEVICE_ID_CTRL);
-        ext_io_get_io_direction();
-        k_msleep(10);
-        ext_io_get_output_state();
-        k_msleep(10);
-        ext_io_get_output_high_z();
-        k_msleep(10);
-        ext_io_get_pull_enable();
-        k_msleep(10);
-        ext_io_get_pull_Down_up();
-        k_msleep(10);
-        ext_io_get_input_state();
-        k_msleep(10);
+        // ext_io_get_io_direction();
+        // k_msleep(10);
+        // ext_io_get_output_state();
+        // k_msleep(10);
+        // ext_io_get_output_high_z();
+        // k_msleep(10);
+        // ext_io_get_pull_enable();
+        // k_msleep(10);
+        // ext_io_get_pull_Down_up();
+        // k_msleep(10);
+        // ext_io_get_input_state();
+        // k_msleep(10);
+        // ext_io_set_io_direction(0, 1);
+
+        // i2c_write_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z, 0x0F);
+        // k_msleep(1);
+        // uint8_t ret = i2c_read_bytes(EXT_IC_ADDR, REG_OUTPUT_HIGH_Z);
+        // LOG_DBG("IO Direction: 0x%X", ret);
+
+        
+        ext_io_set_output_state(2, 1);
+        k_msleep(500);
+        ext_io_set_output_state(2, 0);
+        k_msleep(500);
+
+        ext_io_set_output_state(3, 1);
+        k_msleep(500);
+        ext_io_set_output_state(3, 0);
+        k_msleep(500);
+
+        ext_io_set_output_state(4, 1);
+        k_msleep(500);
+        ext_io_set_output_state(4, 0);
+        k_msleep(500);
     }
 
     return true;
