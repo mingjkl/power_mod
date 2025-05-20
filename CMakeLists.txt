@@ -10,4 +10,5 @@ FILE(GLOB app_sources src/*.c)
 target_sources(app PRIVATE ${app_sources})
 # NORDIC SDK APP END
 # SPDX-License-Identifier: Apache-2.0
+set(FLASH_RUNNER nrfjprog CACHE STRING "" FORCE)
 
