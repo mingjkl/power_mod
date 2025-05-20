@@ -3,6 +3,7 @@
 #include <hal/nrf_gpio.h>
 #include <zephyr/logging/log.h>
 #include "pinmap.h"
+#include "i2c_zephyr.h"
 
 LOG_MODULE_REGISTER(iic, LOG_LEVEL_DBG);
 
@@ -42,6 +43,9 @@ void i2c_init(void)
 uint8_t buffer[2] = {0};
 uint8_t i2c_write_bytes(uint8_t ic_addr, uint8_t addr, uint8_t data) 
 {
+	z_i2c_write(ic_addr, addr, &data, 1);
+	return 0;
+
 	buffer[0] = addr;
 	buffer[1] = data;
 	nrfx_twi_xfer_desc_t xfer_desc = {
@@ -80,6 +84,9 @@ uint8_t i2c_read_bytes(uint8_t ic_addr, uint8_t addr)
 {
 	uint8_t addr_buffer[1] = {addr};
 	uint8_t data_buffer[1];
+
+	z_i2c_read(ic_addr, addr, data_buffer, 1);
+	return data_buffer[0];
 
 	nrfx_twi_xfer_desc_t xfer_desc = {
 		.type = NRFX_TWI_XFER_TXRX,

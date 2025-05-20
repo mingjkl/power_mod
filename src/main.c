@@ -11,6 +11,7 @@
 #include "ext_io.h"
 #include "pinmap.h"
 #include "nrfx_power.h"
+#include "i2c_zephyr.h"
 
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
@@ -44,18 +45,18 @@ int main(void)
     regout0_init();
 
 	LOG_DBG("Begin");
-	i2c_init();
-	io_init();
+	// i2c_init();
+	// io_init();
 
-    bat_boost_enable(0);
-    current_sample_power_enable(1);
+    // bat_boost_enable(0);
+    // current_sample_power_enable(1);
 
-    bat_charger_power_enable(0);
-    bat_charger_enable(0);
+    // bat_charger_power_enable(0);
+    // bat_charger_enable(0);
 
-    ao_en_enable(1);
+    // ao_en_enable(1);
 
-    
+    z_i2c_init();
 
 
     while (1)
