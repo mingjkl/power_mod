@@ -21,7 +21,7 @@
 uint8_t ext_io_output_global_val = 0; 
 
 
-LOG_MODULE_REGISTER(ext_io, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(ext_io, LOG_LEVEL_ERR);
 
 void ext_io_sw_reset(void)
 {

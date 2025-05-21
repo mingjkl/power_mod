@@ -38,6 +38,23 @@ static int regout0_init(void)
     return 0; /* 不会执行到这里 */
 }
 
+
+#define BAT_MANAGE_IC_ADDR 0x6B
+#define BAT_INFO_ADDR 0x48
+// 电池管理芯片在线确认
+void bat_manage_check(void)
+{
+    uint8_t val = i2c_read_bytes(BAT_MANAGE_IC_ADDR, BAT_INFO_ADDR);
+    if (val == 0x08)
+    {
+        LOG_DBG("Battery management chip is online");
+    }
+    else
+    {
+        LOG_ERR("Battery management chip is offline");
+    }
+}
+
 int i = 0;
 int main(void)
 {
@@ -50,20 +67,23 @@ int main(void)
     bat_boost_enable(0);
     current_sample_power_enable(1);
 
-    bat_charger_power_enable(0);
+    bat_charger_power_enable(1);
     bat_charger_enable(0);
 
     ao_en_enable(1);
 
-    
+    bat_manage_check();
 
 
     while (1)
     {
+        uint8_t val = i2c_read_bytes(0x6B, 0x48);
+        LOG_DBG("I2C Read: 0x%02X", val);
+        k_msleep(100);
         statu_led_set(1);
         k_msleep(100);
 		i++;
-		LOG_DBG("Hello World! %d", i);
+		// LOG_DBG("Hello World! %d", i);
         
         statu_led_set(0);
         k_msleep(100);
@@ -71,3 +91,5 @@ int main(void)
 
     return 0;
 }
+
+
