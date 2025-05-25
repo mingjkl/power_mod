@@ -11,8 +11,8 @@
 #include "ext_io.h"
 #include "pinmap.h"
 #include "nrfx_power.h"
-#include "i2c_zephyr.h"
-
+#include "bat_manage.h"
+#include <hal/nrf_power.h>
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
@@ -48,26 +48,28 @@ int main(void)
 	// i2c_init();
 	// io_init();
 
-    // bat_boost_enable(0);
-    // current_sample_power_enable(1);
+    bat_boost_enable(0);
+    current_sample_power_enable(0);
 
-    // bat_charger_power_enable(0);
-    // bat_charger_enable(0);
+    bat_charger_power_enable(0);
+    bat_charger_enable(0);
 
-    // ao_en_enable(1);
-
-    z_i2c_init();
+    ao_en_enable(0);
 
 
     while (1)
     {
-        statu_led_set(1);
-        k_msleep(100);
-		i++;
-		LOG_DBG("Hello World! %d", i);
+        // bat_vbat_adc_get();
+        // k_msleep(100);
+        // statu_led_set(0);
+        // k_msleep(1000);
+		// i++;
+		// LOG_DBG("Hello World! %d", i);
         
-        statu_led_set(0);
-        k_msleep(100);
+        // statu_led_set(1);
+        k_msleep(1000);
+        
+        // nrf_power_system_off(NRF_POWER);
     }
 
     return 0;
