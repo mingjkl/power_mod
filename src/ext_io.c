@@ -371,7 +371,7 @@ void ext_ic_check(void)
 
 void statu_led_set(uint8_t status)
 {
-    if(status)
+    if(!status)
     {
         ext_io_set_output_state(LED_EXT_PIN, 1); // 设置为高电平
     }
@@ -383,7 +383,7 @@ void statu_led_set(uint8_t status)
 
 uint8_t is_key_on(void)
 {
-    uint8_t key_state = ext_io_get_channel_state(KEY_EXT_PIN);
+    uint8_t key_state = !ext_io_get_channel_state(KEY_EXT_PIN);
     if(key_state == 1)
     {
         LOG_DBG("Key is pressed");

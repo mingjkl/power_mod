@@ -68,7 +68,7 @@ uint8_t i2c_write_array(uint8_t ic_addr, uint8_t addr, uint8_t *data, uint8_t le
 		buffer[i + 1] = data[i];
 	}
 	nrfx_twi_xfer_desc_t xfer_desc = {
-		.type = NRFX_TWI_XFER_TX,
+		.type = NRFX_TWI_XFER_TXTX,
 		.address = ic_addr,
 		.primary_length = sizeof(buffer),
 		.p_primary_buf = buffer,
@@ -103,25 +103,28 @@ uint8_t i2c_read_bytes(uint8_t ic_addr, uint8_t addr)
 	return data_buffer[0];
 }
 
+uint8_t i2c_read_data_buffer[20] = {0};
 uint8_t i2c_read_array(uint8_t ic_addr, uint8_t addr, uint8_t *data, uint8_t len) 
 {
 	uint8_t addr_buffer[1] = {addr};
-	uint8_t data_buffer[len];
+	for (int i = 0; i < len; i++) {
+		i2c_read_data_buffer[i] = 0;
+	}
 
 	nrfx_twi_xfer_desc_t xfer_desc = {
 		.type = NRFX_TWI_XFER_TXRX,
 		.address = ic_addr,
 		.primary_length = sizeof(addr_buffer),
 		.p_primary_buf = addr_buffer,
-		.secondary_length = sizeof(data_buffer),
-		.p_secondary_buf = data_buffer,
+		.secondary_length = len,
+		.p_secondary_buf = i2c_read_data_buffer,
 	};
 
 	
 	nrfx_twi_xfer(&twi, &xfer_desc, 0);
 	while(nrfx_twi_is_busy(&twi)){};
 	for (int i = 0; i < len; i++) {
-		data[i] = data_buffer[i];
+		data[i] = i2c_read_data_buffer[i];
 	}
 	return 0;
 }

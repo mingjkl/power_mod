@@ -7,6 +7,8 @@
 #include "io.h"
 #include "ext_io.h"
 
+#include "bat_manage.h"
+
 LOG_MODULE_REGISTER(io, LOG_LEVEL_INF);
 
 void io_config_high_drive(uint32_t pin_number)
@@ -52,7 +54,6 @@ void io_init(void)
     } else {
         LOG_ERR("External IO initialization failed");
     }
-    
 
 }   
 
@@ -79,8 +80,10 @@ void bat_charger_enable(uint8_t enable)
 {
     if (enable) {
         nrf_gpio_pin_clear(BQ25792_BAT_CE_PIN);
+        bat_charger_enable_set(1);
     } else {
         nrf_gpio_pin_set(BQ25792_BAT_CE_PIN);
+        bat_charger_enable_set(0);
     }
 }
 
