@@ -228,7 +228,7 @@ uint8_t ext_io_get_pull_enable(void)
 
 uint8_t ext_io_get_pull_Down_up(void)
 {
-    uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_PULL_ENABLE);
+    uint8_t val = i2c_read_bytes(EXT_IC_ADDR, REG_PULL_DOWN_UP);
     char state[16] = {0};
     for(uint8_t i = 0; i < 8; i++)
     {
